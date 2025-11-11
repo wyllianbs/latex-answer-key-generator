@@ -83,8 +83,8 @@ O script identifica questões de múltipla escolha através dos comandos `\ti` e
 \begin{answerlist}[label={\texttt{\Alph*}.},leftmargin=*]
   \ti São Paulo.
   \ti Rio de Janeiro.
-  \di Brasília.  % Resposta correta (posição C)
-  \ti Salvador.
+  \di Curitiba.  % Resposta correta (posição C)
+  \ti Florianópolis.
   \ti Belo Horizonte.
 \end{answerlist}
 ```
