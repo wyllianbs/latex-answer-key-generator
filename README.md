@@ -78,7 +78,7 @@ Preview das primeiras 10 respostas:
 O script identifica questões de múltipla escolha através dos comandos `\ti` e `\di`:
 
 ```latex
-\item \rtask \ponto{\pt} Qual é a capital do Brasil?
+\item \rtask \ponto{\pt} Qual é a capital do Estado do Paraná?
 
 \begin{answerlist}[label={\texttt{\Alph*}.},leftmargin=*]
   \ti São Paulo.
