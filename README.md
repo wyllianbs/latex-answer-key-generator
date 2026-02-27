@@ -5,14 +5,16 @@ Código para extração de gabaritos de provas escritas em LaTeX e exportá-los 
 ## 🎯 Funcionalidades
 
 - ✅ **Extração automática** de respostas de arquivos LaTeX.
+- ✅ **Suporte a múltiplos arquivos** (múltiplas versões de prova em uma única execução).
 - ✅ **Suporte a múltiplos formatos** de questões:
   - Múltipla escolha (A, B, C, D, E)
   - Verdadeiro/Falso (V/F)
-- ✅ **Exportação em CSV** para fácil integração com sistemas de correção.
+- ✅ **Exportação em CSV** com uma coluna por versão de prova, para fácil integração com sistemas de correção.
 - ✅ **Interface interativa** com valores padrão.
+- ✅ **Derivação automática** do nome do arquivo de saída com base nos arquivos de entrada.
 - ✅ **Arquitetura OOP** com separação de responsabilidades.
 - ✅ **Type Hints** completos para melhor manutenção.
-- ✅ **Preview automático** das respostas extraídas.
+- ✅ **Preview tabular** das respostas extraídas por versão.
 
 ## 📋 Pré-requisitos
 
@@ -41,34 +43,38 @@ python3 generate_answer_key.py
 ```
 
 O programa solicitará:
-1. **Arquivo LaTeX de entrada** (padrão: `P1A.tex`).
-2. **Arquivo CSV de saída** (padrão: `P1A.csv`).
+1. **Arquivo(s) LaTeX de entrada** separados por espaço (padrão: `P1A.tex P1B.tex P1C.tex`).
+2. **Arquivo CSV de saída** (padrão derivado automaticamente dos nomes dos arquivos de entrada).
 
-Pressione `Enter` para usar os valores padrão ou digite caminhos personalizados. O arquivo P1A.tex pode ser gerado conforme código disponível em https://github.com/wyllianbs/carderno_prova.
+Pressione `Enter` para usar os valores padrão ou digite caminhos personalizados. Os arquivos `.tex` podem ser gerados conforme código disponível em https://github.com/wyllianbs/carderno_prova.
 
 ### Exemplo de Execução
 
 ```bash
 $ python3 generate_answer_key.py
-Digite o caminho do arquivo LaTeX (padrão: P1A.tex):
-Digite o nome do arquivo CSV de saída (padrão: P1A.csv):
+Digite o(s) caminho(s) do(s) arquivo(s) LaTeX (padrão: P1A.tex P1B.tex P1C.tex):
+Digite o nome do arquivo CSV de saída (padrão: P1.csv):
 
-Processando questões...
+Processando P1A.tex...
+  → 10 questões encontradas em P1A.tex
 
-Gabarito salvo com sucesso em: P1A.csv
+Processando P1B.tex...
+  → 10 questões encontradas em P1B.tex
+
+Processando P1C.tex...
+  → 10 questões encontradas em P1C.tex
+
+Gabarito salvo com sucesso em: P1.csv
 Total de questões processadas: 10
+Total de versões: 3
 
 Preview das primeiras 10 respostas:
-  q1,V
-  q2,C
-  q3,C
-  q4,E
-  q5,A
-  q6,F
-  q7,B
-  q8,F
-  q9,B
-  q10,F
+  questao   P1A       P1B       P1C
+  ----------------------------------------
+  q1        V         F         C
+  q2        C         A         V
+  q3        C         B         F
+  ...
 ```
 
 ## 📄 Formato do Arquivo LaTeX
@@ -117,11 +123,12 @@ O projeto segue princípios de **Clean Code** e **SOLID**:
 
 ```
 generate_answer_key.py
-├── Answer              # Modelo de dados para resposta
-├── LatexParser         # Parser de arquivos LaTeX
-├── CSVExporter         # Exportador para formato CSV
-├── AnswerKeyGenerator  # Orquestrador principal
-└── main()              # Ponto de entrada
+├── Answer                  # Modelo de dados para resposta
+├── LatexParser             # Parser de arquivos LaTeX
+├── CSVExporter             # Exportador para formato CSV multi-versão
+├── AnswerKeyGenerator      # Orquestrador principal (múltiplos arquivos)
+├── derive_default_output() # Derivação automática do nome de saída
+└── main()                  # Ponto de entrada
 ```
 
 ### Classes Principais
@@ -131,7 +138,7 @@ Representa uma resposta individual com número da questão e alternativa.
 
 ```python
 answer = Answer(question_number=1, answer="C")
-print(answer.to_csv_line())  # "q1,C\n"
+print(answer)  # Answer(q1, C)
 ```
 
 #### `LatexParser`
@@ -143,43 +150,51 @@ answers = parser.parse()
 ```
 
 #### `CSVExporter`
-Gerencia a exportação das respostas para CSV.
+Gerencia a exportação das respostas de múltiplas versões de prova para um único CSV. Recebe um dicionário mapeando o nome de cada versão para sua lista de respostas.
 
 ```python
 exporter = CSVExporter(Path("gabarito.csv"))
-exporter.export(answers)
+exporter.export(all_answers, file_names)
 ```
 
 #### `AnswerKeyGenerator`
-Coordena todo o processo de geração do gabarito.
+Coordena o processo de geração do gabarito para múltiplos arquivos LaTeX simultaneamente.
 
 ```python
-generator = AnswerKeyGenerator("prova.tex", "gabarito.csv")
+generator = AnswerKeyGenerator(["P1A.tex", "P1B.tex", "P1C.tex"], "P1.csv")
 generator.run()
+```
+
+#### `derive_default_output()`
+Função auxiliar que deriva automaticamente o nome do arquivo CSV de saída com base no prefixo comum entre os arquivos de entrada.
+
+```python
+derive_default_output("P1A.tex P1B.tex P1C.tex")  # retorna "P1.csv"
+derive_default_output("prova.tex")                  # retorna "prova.csv"
 ```
 
 ## 📊 Formato de Saída
 
-O arquivo CSV gerado segue o formato:
+O arquivo CSV gerado consolida todas as versões de prova em colunas, seguindo o formato:
 
 ```csv
-q1,V
-q2,C
-q3,F
-q4,E
-q5,A
-q6,B
+q1,V,F,C
+q2,C,A,V
+q3,F,B,F
+q4,E,C,A
+q5,A,D,B
+q6,B,E,D
 ```
 
 em que:
 - **Primeira coluna**: Identificador da questão (`q1`, `q2`, ...).
-- **Segunda coluna**: Resposta (`A`-`E` para múltipla escolha, `V`/`F` para verdadeiro/falso).
+- **Demais colunas**: Resposta de cada versão de prova (`A`–`E` para múltipla escolha, `V`/`F` para verdadeiro/falso), na ordem em que os arquivos foram fornecidos.
 
 O arquivo de saída CSV pode ser usado como _input_ em um sistema OMR (_Optical Mark Recognition_), _e.g._, https://github.com/Udayraj123/OMRChecker/.
 
 ## 🎨 Exemplo Completo
 
-Veja o arquivo [`P1A.tex`](P1A.tex) (https://github.com/wyllianbs/carderno_prova) incluído no repositório para um exemplo completo de prova LaTeX compatível com o gerador.
+Veja os arquivos [`P1A.tex`](P1A.tex), [`P1B.tex`](P1B.tex) e [`P1C.tex`](P1C.tex) (https://github.com/wyllianbs/carderno_prova) incluídos no repositório para exemplos completos de provas LaTeX compatíveis com o gerador.
 
 ### Estrutura do P1A.tex
 
@@ -216,19 +231,17 @@ Veja o arquivo [`P1A.tex`](P1A.tex) (https://github.com/wyllianbs/carderno_prova
 
 ### Modificando Padrões
 
-Edite as funções `get_user_input()` para alterar valores padrão:
+Edite a função `main()` para alterar os arquivos padrão:
 
 ```python
 def main() -> None:
-    input_file = get_user_input(
-        "Digite o caminho do arquivo LaTeX",
-        "minha_prova.tex"  # Novo padrão
+    default_input = "ProvaA.tex ProvaB.tex"  # Novos padrões
+
+    input_files_str = get_user_input(
+        "Digite o(s) caminho(s) do(s) arquivo(s) LaTeX",
+        default_input
     )
-    
-    output_file = get_user_input(
-        "Digite o nome do arquivo CSV de saída",
-        "meu_gabarito.csv"  # Novo padrão
-    )
+    ...
 ```
 
 ### Adicionando Novos Formatos
@@ -245,9 +258,9 @@ class LatexParser:
 ## 🐛 Tratamento de Erros
 
 O programa valida:
-- ✅ Existência do arquivo LaTeX especificado.
-- ✅ Formato correto do arquivo LaTeX.
-- ✅ Presença de questões no documento.
+- ✅ Existência de cada arquivo LaTeX especificado.
+- ✅ Formato correto dos arquivos LaTeX.
+- ✅ Presença de questões em pelo menos um documento.
 - ✅ Permissões de escrita no diretório de saída.
 - ✅ Codificação UTF-8 dos arquivos.
 
@@ -257,11 +270,14 @@ O programa valida:
 # Arquivo não encontrado
 Erro: Arquivo 'prova.tex' não encontrado.
 
-# Nenhuma resposta detectada
-Aviso: Não foi possível encontrar resposta para a questão 5.
+# Nenhuma resposta detectada em um arquivo (aviso, não encerra)
+Aviso: Nenhuma resposta encontrada em P1B.tex.
 
-# Sem questões no arquivo
-Nenhuma resposta foi encontrada no arquivo.
+# Nenhuma resposta em nenhum arquivo (encerra)
+Nenhuma resposta foi encontrada em nenhum arquivo.
+
+# Resposta não detectada em questão específica
+Aviso: Não foi possível encontrar resposta para a questão 5.
 ```
 
 ## 🧪 Testando
@@ -269,19 +285,19 @@ Nenhuma resposta foi encontrada no arquivo.
 ### Teste Manual
 
 ```bash
-# Use o arquivo de exemplo incluído
+# Use os arquivos de exemplo incluídos
 python3 generate_answer_key.py
-# Pressione Enter duas vezes para usar P1A.tex
+# Pressione Enter duas vezes para usar P1A.tex P1B.tex P1C.tex
 ```
 
 ### Validação do CSV
 
 ```bash
 # Visualize o gabarito gerado
-cat P1A.csv
+cat P1.csv
 
 # Conte o número de questões
-wc -l P1A.csv
+wc -l P1.csv
 ```
 
 ## 📚 Requisitos Técnicos
@@ -291,10 +307,10 @@ wc -l P1A.csv
 O código utiliza type hints completos para melhor IDE support:
 
 ```python
-def extract_answers(latex_content: str) -> List[Answer]:
+def parse(self) -> List[Answer]:
     ...
 
-def save_to_csv(answers: List[Answer], output_file: Path) -> None:
+def export(self, all_answers: Dict[str, List[Answer]], file_names: List[str]) -> None:
     ...
 ```
 
@@ -304,7 +320,6 @@ Princípios aplicados:
 - **Single Responsibility Principle**: Cada classe tem uma responsabilidade única.
 - **Open/Closed Principle**: Fácil extensão sem modificação.
 - **Dependency Inversion**: Dependência de abstrações, não implementações.
-
 
 ## 📜 Licença
 
